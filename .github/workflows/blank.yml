@@ -1,0 +1,52 @@
+name: Main
+on:
+  # Triggers the workflow on push or pull request events but only for the main branch
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  schedule:
+    - cron: 00 16 * * *
+  watch:
+    types: [started]
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+jobs:
+  get:
+    runs-on: ubuntu-latest
+    permissions: write-all
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v2
+    - name: Echo Free space
+      run: |
+          echo "Free space:"
+          df -h
+    - name: Prepare Env
+      run: |
+        sudo apt-get update
+        sudo apt-get install aria2
+
+    - name: Get 
+      run: |
+        mkdir tools
+        cd tools
+        mkdir model
+        cd model
+        aria2c -x 4 https://civitai.com/api/download/models/151978
+        cd ..
+        tar -czvf archive.tar.gz model
+
+    - name: Get current date
+      id: date
+      run: echo "::set-output name=date::$(date +'%Y-%m-%d')"
+        
+    - name: Release 
+      uses: ncipollo/release-action@v1
+      with:
+        artifacts: "tools/*.tar.gz"
+        tag: model-${{ steps.date.outputs.date }}
+        token: ${{ secrets.GITHUB_TOKEN }}
+        allowUpdates: true
